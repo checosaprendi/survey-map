@@ -1,0 +1,894 @@
+[index.html](https://github.com/user-attachments/files/26600734/index.html)
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>현장조사 손지도</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+      background: #f4f7fb;
+      color: #1f2937;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 1.35fr 430px;
+      height: 100vh;
+    }
+
+    .map-wrap {
+      position: relative;
+      min-height: 420px;
+      background: #e5eef8;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-hint {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid #dbe2ea;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-left: 1px solid #dbe2ea;
+      min-width: 0;
+    }
+
+    .sidebar-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .sidebar-header h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    .sidebar-header p {
+      margin: 0;
+      font-size: 13px;
+      color: #6b7280;
+      line-height: 1.55;
+    }
+
+    .panel {
+      padding: 16px 18px;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .muted-box {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px dashed #cbd5e1;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 72px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary {
+      background: #eef2ff;
+      color: #1e40af;
+    }
+
+    .secondary:hover {
+      background: #e0e7ff;
+    }
+
+    .danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .danger:hover {
+      background: #fecaca;
+    }
+
+    .ghost {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .ghost:hover {
+      background: #e5e7eb;
+    }
+
+    .list-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .place-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .place-card:hover {
+      border-color: #93c5fd;
+      background: #f8fbff;
+    }
+
+    .place-card.active {
+      border-color: #2563eb;
+      background: #eff6ff;
+      box-shadow: inset 0 0 0 1px #2563eb;
+    }
+
+    .place-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .place-coord {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .place-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+
+    .place-body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #374151;
+      white-space: pre-wrap;
+    }
+
+    .empty {
+      padding: 18px 8px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+
+    .leaflet-popup-content {
+      min-width: 220px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .popup-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .popup-row {
+      margin-bottom: 6px;
+    }
+
+    .popup-label {
+      font-weight: 700;
+      color: #374151;
+    }
+
+    .hidden-input {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 55vh auto;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      #map {
+        height: 55vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="map-wrap">
+      <div class="map-hint">
+        지도 클릭 → 장소 추가<br />
+        마커/목록 클릭 → 수정
+      </div>
+      <div id="map"></div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>현장조사 손지도</h1>
+        <p>
+          조사장소, 특기사항, 조사일정, 조사시간, 메모를
+          한 화면에서 관리합니다.
+        </p>
+      </div>
+
+      <section class="panel">
+        <h2>선택한 장소 편집</h2>
+
+        <div class="form-group">
+          <label for="placeName">조사장소</label>
+          <input id="placeName" type="text" placeholder="예: 마을회관 앞" />
+        </div>
+
+        <div class="form-group">
+          <label for="category">장소 유형</label>
+          <select id="category">
+            <option value="일반">일반</option>
+            <option value="인터뷰">인터뷰</option>
+            <option value="관찰">관찰</option>
+            <option value="주의">주의</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="specialNote">장소별 특기사항</label>
+          <textarea id="specialNote" placeholder="예: 주차 협소, 진입로 좁음"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="surveyDate">조사 일정</label>
+          <input id="surveyDate" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label for="surveyTime">조사시간</label>
+          <input
+            id="surveyTime"
+            type="text"
+            inputmode="numeric"
+            placeholder="예: 7, 930, 1230"
+            maxlength="5"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="memo">메모</label>
+          <textarea id="memo" placeholder="현장 조사 메모를 입력하세요"></textarea>
+        </div>
+
+        <div class="button-row">
+          <button id="saveBtn" class="primary">저장</button>
+          <button id="deleteBtn" class="danger">삭제</button>
+          <button id="centerBtn" class="secondary">선택 위치로 이동</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>데이터 관리</h2>
+        <div class="button-row">
+          <button id="exportBtn" class="ghost">JSON 내보내기</button>
+          <button id="importBtn" class="ghost">JSON 불러오기</button>
+          <button id="clearBtn" class="danger">전체 삭제</button>
+        </div>
+        <input id="fileInput" class="hidden-input" type="file" accept=".json,application/json" />
+      </section>
+
+      <section class="panel">
+        <h2>사용 방법</h2>
+        <div class="muted-box">
+          1. 지도 클릭 → 장소 생성<br />
+          2. 오른쪽 정보 입력 → 저장<br />
+          3. 조사일정은 달력에서 선택<br />
+          4. 조사시간은 숫자만 입력해도 자동으로 시:분 형식 적용<br />
+          5. 데이터는 이 브라우저에 저장되며 JSON 백업 가능
+        </div>
+      </section>
+
+      <section id="placeList" class="list-wrap">
+        <div class="empty">아직 등록된 장소가 없습니다.</div>
+      </section>
+    </aside>
+  </div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    const STORAGE_KEY = "field-survey-map-ghpages-v2";
+
+    const state = {
+      places: [],
+      markers: new Map(),
+      selectedId: null
+    };
+
+    const placeNameInput = document.getElementById("placeName");
+    const categoryInput = document.getElementById("category");
+    const specialNoteInput = document.getElementById("specialNote");
+    const surveyDateInput = document.getElementById("surveyDate");
+    const surveyTimeInput = document.getElementById("surveyTime");
+    const memoInput = document.getElementById("memo");
+    const saveBtn = document.getElementById("saveBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const centerBtn = document.getElementById("centerBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const importBtn = document.getElementById("importBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const fileInput = document.getElementById("fileInput");
+    const placeList = document.getElementById("placeList");
+
+    const map = L.map("map", {
+      minZoom: 2,
+      worldCopyJump: false,
+      maxBounds: [[-85, -180], [85, 180]],
+      maxBoundsViscosity: 1.0
+    }).setView([37.5665, 126.9780], 13);
+
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      minZoom: 2,
+      noWrap: true,
+      attribution: "&copy; OpenStreetMap contributors",
+      referrerPolicy: "strict-origin-when-cross-origin"
+    }).addTo(map);
+
+    function createId() {
+      return "place-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeDateValue(value) {
+      if (!value) return "";
+
+      const text = String(value).trim();
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        return text;
+      }
+
+      const match = text.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        return `${match[1]}-${match[2]}-${match[3]}`;
+      }
+
+      return "";
+    }
+
+    function formatSurveyDate(value) {
+      if (!value) return "-";
+
+      const normalized = normalizeDateValue(value);
+      if (!normalized) return value;
+
+      const [year, month, day] = normalized.split("-");
+      return `${year}-${month}-${day}`;
+    }
+
+    function normalizeSurveyTime(value) {
+      const digits = String(value).replace(/\D/g, "").slice(0, 4);
+
+      if (!digits) return "";
+
+      if (digits.length === 1) {
+        return `0${digits}:00`;
+      }
+
+      if (digits.length === 2) {
+        const hour = Number(digits);
+        if (hour > 23) return "";
+        return `${digits}:00`;
+      }
+
+      if (digits.length === 3) {
+        const hour = Number(digits.slice(0, 1));
+        const minute = Number(digits.slice(1));
+
+        if (hour > 23 || minute > 59) return "";
+        return `${String(hour).padStart(2, "0")}:${digits.slice(1)}`;
+      }
+
+      const hour = Number(digits.slice(0, 2));
+      const minute = Number(digits.slice(2, 4));
+
+      if (hour > 23 || minute > 59) return "";
+      return `${digits.slice(0, 2)}:${digits.slice(2, 4)}`;
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.places));
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          state.places = parsed.map((item, index) => ({
+            id: item.id || createId() + "-" + index,
+            name: item.name || `장소 ${index + 1}`,
+            category: item.category || "일반",
+            specialNote: item.specialNote || "",
+            surveyDate: normalizeDateValue(item.surveyDate || ""),
+            surveyTime: normalizeSurveyTime(item.surveyTime || ""),
+            memo: item.memo || "",
+            lat: Number(item.lat),
+            lng: Number(item.lng)
+          })).filter(item => !Number.isNaN(item.lat) && !Number.isNaN(item.lng));
+        }
+      } catch (error) {
+        console.error("저장 데이터 로드 실패:", error);
+      }
+    }
+
+    function getSelectedPlace() {
+      return state.places.find(place => place.id === state.selectedId) || null;
+    }
+
+    function buildPopupHtml(place) {
+      const name = escapeHtml(place.name || "이름 없는 장소");
+      const category = escapeHtml(place.category || "일반");
+      const specialNote = escapeHtml(place.specialNote || "-");
+      const surveyDate = escapeHtml(formatSurveyDate(place.surveyDate));
+      const surveyTime = escapeHtml(place.surveyTime || "-");
+      const memo = escapeHtml(place.memo || "-").replace(/\n/g, "<br>");
+
+      return `
+        <div class="popup-title">${name}</div>
+        <div class="popup-row"><span class="popup-label">유형:</span> ${category}</div>
+        <div class="popup-row"><span class="popup-label">특기사항:</span> ${specialNote}</div>
+        <div class="popup-row"><span class="popup-label">조사 일정:</span> ${surveyDate}</div>
+        <div class="popup-row"><span class="popup-label">조사시간:</span> ${surveyTime}</div>
+        <div class="popup-row"><span class="popup-label">메모:</span><br>${memo}</div>
+      `;
+    }
+
+    function fillForm(place) {
+      if (!place) {
+        placeNameInput.value = "";
+        categoryInput.value = "일반";
+        specialNoteInput.value = "";
+        surveyDateInput.value = "";
+        surveyTimeInput.value = "";
+        memoInput.value = "";
+        return;
+      }
+
+      placeNameInput.value = place.name || "";
+      categoryInput.value = place.category || "일반";
+      specialNoteInput.value = place.specialNote || "";
+      surveyDateInput.value = normalizeDateValue(place.surveyDate || "");
+      surveyTimeInput.value = place.surveyTime || "";
+      memoInput.value = place.memo || "";
+    }
+
+    function renderMarkers() {
+      for (const marker of state.markers.values()) {
+        map.removeLayer(marker);
+      }
+      state.markers.clear();
+
+      state.places.forEach(place => {
+        const marker = L.marker([place.lat, place.lng]).addTo(map);
+        marker.bindPopup(buildPopupHtml(place));
+        marker.on("click", () => selectPlace(place.id, false));
+        state.markers.set(place.id, marker);
+      });
+    }
+
+    function renderList() {
+      if (state.places.length === 0) {
+        placeList.innerHTML = `<div class="empty">아직 등록된 장소가 없습니다.</div>`;
+        return;
+      }
+
+      placeList.innerHTML = "";
+
+      state.places.forEach((place, index) => {
+        const card = document.createElement("div");
+        card.className = "place-card" + (place.id === state.selectedId ? " active" : "");
+
+        const title = document.createElement("div");
+        title.className = "place-title";
+        title.textContent = place.name || `장소 ${index + 1}`;
+
+        const coord = document.createElement("div");
+        coord.className = "place-coord";
+        coord.textContent = `${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}`;
+
+        const tags = document.createElement("div");
+        tags.className = "place-tags";
+
+        const categoryTag = document.createElement("div");
+        categoryTag.className = "tag";
+        categoryTag.textContent = place.category || "일반";
+        tags.appendChild(categoryTag);
+
+        if (place.surveyDate) {
+          const dateTag = document.createElement("div");
+          dateTag.className = "tag";
+          dateTag.textContent = "일정 있음";
+          tags.appendChild(dateTag);
+        }
+
+        if (place.surveyTime) {
+          const timeTag = document.createElement("div");
+          timeTag.className = "tag";
+          timeTag.textContent = place.surveyTime;
+          tags.appendChild(timeTag);
+        }
+
+        const body = document.createElement("div");
+        body.className = "place-body";
+        body.textContent =
+          (place.specialNote ? `특기사항: ${place.specialNote}\n` : "") +
+          (place.surveyDate ? `조사 일정: ${formatSurveyDate(place.surveyDate)}\n` : "") +
+          (place.surveyTime ? `조사시간: ${place.surveyTime}\n` : "") +
+          (place.memo ? `메모: ${place.memo}` : "");
+
+        card.appendChild(title);
+        card.appendChild(coord);
+        card.appendChild(tags);
+        card.appendChild(body);
+
+        card.addEventListener("click", () => {
+          selectPlace(place.id, true);
+        });
+
+        placeList.appendChild(card);
+      });
+    }
+
+    function selectPlace(id, moveMap) {
+      state.selectedId = id;
+      const place = getSelectedPlace();
+      fillForm(place);
+      renderList();
+
+      if (moveMap && place) {
+        map.setView([place.lat, place.lng], Math.max(map.getZoom(), 15));
+        const marker = state.markers.get(place.id);
+        if (marker) marker.openPopup();
+      }
+    }
+
+    function addPlace(lat, lng) {
+      const count = state.places.length + 1;
+
+      const newPlace = {
+        id: createId(),
+        name: `장소 ${count}`,
+        category: "일반",
+        specialNote: "",
+        surveyDate: "",
+        surveyTime: "",
+        memo: "",
+        lat,
+        lng
+      };
+
+      state.places.push(newPlace);
+      saveToStorage();
+      renderMarkers();
+      renderList();
+      selectPlace(newPlace.id, true);
+    }
+
+    function updateSelectedPlace() {
+      const place = getSelectedPlace();
+
+      if (!place) {
+        alert("먼저 지도에서 장소를 하나 추가하세요.");
+        return;
+      }
+
+      const formattedTime = normalizeSurveyTime(surveyTimeInput.value);
+
+      if (surveyTimeInput.value.trim() !== "" && formattedTime === "") {
+        alert("조사시간은 0~23시, 0~59분 범위로 입력하세요.");
+        surveyTimeInput.focus();
+        return;
+      }
+
+      place.name = placeNameInput.value.trim();
+      place.category = categoryInput.value;
+      place.specialNote = specialNoteInput.value.trim();
+      place.surveyDate = normalizeDateValue(surveyDateInput.value);
+      place.surveyTime = formattedTime;
+      place.memo = memoInput.value.trim();
+
+      surveyTimeInput.value = formattedTime;
+
+      saveToStorage();
+      renderMarkers();
+      renderList();
+
+      const marker = state.markers.get(place.id);
+      if (marker) marker.openPopup();
+    }
+
+    function deleteSelectedPlace() {
+      const place = getSelectedPlace();
+
+      if (!place) {
+        alert("삭제할 장소를 먼저 선택하세요.");
+        return;
+      }
+
+      const ok = confirm(`"${place.name || "이름 없는 장소"}"를 삭제할까요?`);
+      if (!ok) return;
+
+      state.places = state.places.filter(item => item.id !== place.id);
+      state.selectedId = null;
+
+      saveToStorage();
+      renderMarkers();
+      renderList();
+      fillForm(null);
+    }
+
+    function centerSelectedPlace() {
+      const place = getSelectedPlace();
+
+      if (!place) {
+        alert("먼저 장소를 선택하세요.");
+        return;
+      }
+
+      map.setView([place.lat, place.lng], Math.max(map.getZoom(), 15));
+      const marker = state.markers.get(place.id);
+      if (marker) marker.openPopup();
+    }
+
+    function exportJson() {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: 2,
+        places: state.places
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const date = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `survey-map-backup-${date}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJsonFile(file) {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const importedPlaces = Array.isArray(parsed) ? parsed : parsed.places;
+
+          if (!Array.isArray(importedPlaces)) {
+            throw new Error("장소 목록 형식이 아닙니다.");
+          }
+
+          const normalized = importedPlaces
+            .filter(item =>
+              typeof item === "object" &&
+              item !== null &&
+              typeof item.lat === "number" &&
+              typeof item.lng === "number"
+            )
+            .map((item, index) => ({
+              id: item.id || createId() + "-" + index,
+              name: item.name || `장소 ${index + 1}`,
+              category: item.category || "일반",
+              specialNote: item.specialNote || "",
+              surveyDate: normalizeDateValue(item.surveyDate || item.interviewSchedule || ""),
+              surveyTime: normalizeSurveyTime(item.surveyTime || ""),
+              memo: item.memo || "",
+              lat: item.lat,
+              lng: item.lng
+            }));
+
+          state.places = normalized;
+          state.selectedId = normalized.length ? normalized[0].id : null;
+
+          saveToStorage();
+          renderMarkers();
+          renderList();
+          fillForm(getSelectedPlace());
+
+          if (normalized.length) {
+            map.setView([normalized[0].lat, normalized[0].lng], 13);
+          }
+
+          alert("불러오기가 완료되었습니다.");
+        } catch (error) {
+          console.error(error);
+          alert("JSON 파일을 읽지 못했습니다.");
+        }
+      };
+
+      reader.readAsText(file, "utf-8");
+    }
+
+    function clearAllPlaces() {
+      const ok = confirm("전체 장소 데이터를 삭제할까요?");
+      if (!ok) return;
+
+      state.places = [];
+      state.selectedId = null;
+      saveToStorage();
+      renderMarkers();
+      renderList();
+      fillForm(null);
+    }
+
+    surveyTimeInput.addEventListener("blur", () => {
+      const raw = surveyTimeInput.value.trim();
+
+      if (!raw) {
+        surveyTimeInput.value = "";
+        return;
+      }
+
+      const formatted = normalizeSurveyTime(raw);
+
+      if (!formatted) {
+        alert("조사시간은 예를 들어 7, 930, 1230처럼 입력하세요.");
+        surveyTimeInput.value = "";
+        return;
+      }
+
+      surveyTimeInput.value = formatted;
+    });
+
+    map.on("click", (event) => {
+      addPlace(event.latlng.lat, event.latlng.lng);
+    });
+
+    saveBtn.addEventListener("click", updateSelectedPlace);
+    deleteBtn.addEventListener("click", deleteSelectedPlace);
+    centerBtn.addEventListener("click", centerSelectedPlace);
+    exportBtn.addEventListener("click", exportJson);
+    importBtn.addEventListener("click", () => fileInput.click());
+    clearBtn.addEventListener("click", clearAllPlaces);
+
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (file) {
+        importJsonFile(file);
+      }
+      event.target.value = "";
+    });
+
+    loadFromStorage();
+    renderMarkers();
+    renderList();
+
+    if (state.places.length > 0) {
+      selectPlace(state.places[0].id, false);
+    }
+  </script>
+</body>
+</html>
